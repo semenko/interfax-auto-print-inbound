@@ -46,7 +46,7 @@ in_result = c.getList('AllMessages', 20)
 if in_result[0] != 0:
      print >> stderr, "ERROR: Inbound return code %d" % in_result[0]
      exit()
-print('GetList returned with %d items' % (len(in_result[1])))
+print('\tGetList returned with %d items' % (len(in_result[1])))
 
 try:
      # This is all on a ram drive for security.
@@ -77,7 +77,7 @@ for in_item in reversed(in_result[1]):
 
      # Write the log of inbound faxes.
      t = in_item[7]
-     rcv_time = "%d/%d/%d %d:%d" % (t[1], t[2], t[0], t[3], t[4])  # Meh, strftime lazy. 
+     rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4])  # Meh, strftime lazy. 
      print >> in_log , "%s> From: %s (%s), Pages: %d, Message ID: %d" % (rcv_time, filter(str.isalnum, in_item[8]), filter(str.isalnum, in_item[2]), in_item[4], in_item[0])
 
 in_log.close()
@@ -89,12 +89,12 @@ pickle.dump(inbound_cache, open('.pickle-cache', 'w'))
 # Outbound faxes
 #############
 
-# Get the last 100 outbound faxes (with ID less than 9999...), really weird interfax API ...
+print("Getting 100 most recent outbound faxes...")
 out_result = c.faxQuery( 'LT', 999999999, 100)
 if out_result[0] != 0:
      print >> stderr, "ERROR: OUTbound return code %d" % in_result[0]
      exit()
-print('FaxQuery returned with %d items' % (len(out_result[1])))
+print('\tFaxQuery returned with %d items' % (len(out_result[1])))
 
 # Save those to our log
 out_log = open('outbound_fax_log.txt', 'w')
@@ -102,7 +102,7 @@ for out_item in out_result[1]:
      # "\nparentTxId: %d\ntxId: %d\nsubmitTime: %s\npostponeTime: %s\ncompletionTime: %s\nuserId: %s\ncontact: %s\njobId: %s\ndestinationFax: %s\nreplyEmail: %s\nremoteCSID: %s\npagesSent: %s\nstatus: %d\nduration: %d\nsubject: %s\npagesSubmitted: %d\nsenderCSID: %s\npriority: %d\nunits: %d\ncostPerUnit: %d\npageSize: %s\npageOrientation: %s\npageResolution: %s\nrenderingQuality: %s\npageHeader: %s\nretriesToPerform: %d\ntrialsPerformed: %d" % currItem
 
      t = out_item[2]  # Submitted time.
-     rcv_time = "%d/%d/%d %d:%d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
+     rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
 
      status_code = int(out_item[12])
      if status_code == 0:
