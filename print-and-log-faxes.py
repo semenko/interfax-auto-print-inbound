@@ -102,7 +102,7 @@ if out_result[0] != 0:
 print('\tFaxQuery returned with %d items' % (len(out_result[1])))
 
 # Save those to our log
-out_log = open('outbound_fax_log.txt', 'w')
+out_log = open('outbound_fax_log.txt', 'a')
 for out_item in out_result[1]:
      if out_item[0] not in outbound_cache:
           outbound_cache.insert(0, out_item[0])
