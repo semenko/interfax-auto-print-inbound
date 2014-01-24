@@ -13,6 +13,7 @@ This is a hackjob and could be trivially optimized (and hasn't been tested). You
 import ConfigParser
 import pickle
 import subprocess
+import time
 from os import mkdir
 from interfax import client
 from sys import stderr
@@ -69,7 +70,7 @@ for in_item in reversed(in_result[1]):
           if dl_return_code == 0:
                print("*** Printing %d" % (in_item[0]))
                ### Call lpr and print
-               # retcode = subprocess.call(['lpr', '-P', 'Brother_MFC-8910DW', 'inbound/%d.pdf' % in_item[0]])
+               retcode = subprocess.call(['lpr', '-P', 'Brother_MFC-8910DW', 'inbound/%d.pdf' % in_item[0]])
                if retcode < 0:
                     print >>sys.stderr, "Printing error, child was terminated by signal", -retcode
           else:
@@ -89,8 +90,8 @@ pickle.dump(inbound_cache, open('.pickle-cache', 'w'))
 # Outbound faxes
 #############
 
-print("Getting 100 most recent outbound faxes...")
-out_result = c.faxQuery( 'LT', 999999999, 100)
+print("Getting 50 most recent outbound faxes...")
+out_result = c.faxQuery( 'LT', 999999999, 50)
 if out_result[0] != 0:
      print >> stderr, "ERROR: OUTbound return code %d" % in_result[0]
      exit()
@@ -119,5 +120,9 @@ for out_item in out_result[1]:
           from_user = filter(str.isalnum, out_item[9].split('@')[0])
 
      print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
+     
+     # Remove the fax.
+     c.hideFax(int(out_item[1]))
+     time.sleep(1)
 
 out_log.close()
