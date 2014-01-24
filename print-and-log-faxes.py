@@ -28,12 +28,15 @@ password = config.get('interfax', 'password', 0)
 print("Getting inbound/outbound cache...")
 try:
      pkl_file = open('.pickle-cache', 'rb')
-     inbound_cache = pickle.load(pkl_file)
+     inbound_cache, outbound_cache = pickle.load(pkl_file)
      while len(inbound_cache) > 20:
           inbound_cache.pop()
+     while len(outbound_cache) > 50:
+          outbound_cache.pop()
 except IOError:
      print("\tNo cache found, creating new one.")
      inbound_cache = []
+     outbound_cache = []
 
 print("Connecting to interfax.")
 c = client.InterFaxClient(username, password)
@@ -56,7 +59,7 @@ except OSError:
      pass
 
 # Loop over inbound faxes
-in_log = open('inbound_fax_log.txt', 'w')
+in_log = open('inbound_fax_log.txt', 'a')
 for in_item in reversed(in_result[1]):
      # Sanity check
      assert(int(in_item[0]) == in_item[0])
@@ -83,8 +86,9 @@ for in_item in reversed(in_result[1]):
 
 in_log.close()
 
-# Save the printed cache
-pickle.dump(inbound_cache, open('.pickle-cache', 'w'))
+# Save the printed cache, only partially updated (outbound coming next!)
+pickle.dump((inbound_cache, outbound_cache), open('.pickle-cache', 'w'))
+
 
 #############
 # Outbound faxes
@@ -100,29 +104,34 @@ print('\tFaxQuery returned with %d items' % (len(out_result[1])))
 # Save those to our log
 out_log = open('outbound_fax_log.txt', 'w')
 for out_item in out_result[1]:
-     # "\nparentTxId: %d\ntxId: %d\nsubmitTime: %s\npostponeTime: %s\ncompletionTime: %s\nuserId: %s\ncontact: %s\njobId: %s\ndestinationFax: %s\nreplyEmail: %s\nremoteCSID: %s\npagesSent: %s\nstatus: %d\nduration: %d\nsubject: %s\npagesSubmitted: %d\nsenderCSID: %s\npriority: %d\nunits: %d\ncostPerUnit: %d\npageSize: %s\npageOrientation: %s\npageResolution: %s\nrenderingQuality: %s\npageHeader: %s\nretriesToPerform: %d\ntrialsPerformed: %d" % currItem
+     if out_item[0] not in outbound_cache:
+          outbound_cache.insert(0, out_item[0])
 
-     t = out_item[2]  # Submitted time.
-     rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
+          # "\nparentTxId: %d\ntxId: %d\nsubmitTime: %s\npostponeTime: %s\ncompletionTime: %s\nuserId: %s\ncontact: %s\njobId: %s\ndestinationFax: %s\nreplyEmail: %s\nremoteCSID: %s\npagesSent: %s\nstatus: %d\nduration: %d\nsubject: %s\npagesSubmitted: %d\nsenderCSID: %s\npriority: %d\nunits: %d\ncostPerUnit: %d\npageSize: %s\npageOrientation: %s\npageResolution: %s\nrenderingQuality: %s\npageHeader: %s\nretriesToPerform: %d\ntrialsPerformed: %d" % currItem
 
-     status_code = int(out_item[12])
-     if status_code == 0:
-          status = "Ok"
-     elif status_code < 0:
-          status = "Sending"
-     else:
-          status = "ERROR! Code: %d" % (status_code)
+          t = out_item[2]  # Submitted time.
+          rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
+
+          status_code = int(out_item[12])
+          if status_code == 0:
+               status = "Ok"
+          elif status_code < 0:
+               status = "Sending"
+          else:
+               status = "ERROR! Code: %d" % (status_code)
+          
+          if out_item[9] == "info@aldinetravel.com":
+               from_user = "(machine)"
+          else:
+               # Get the username.
+               from_user = filter(str.isalnum, out_item[9].split('@')[0])
+
+          print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
      
-     if out_item[9] == "info@aldinetravel.com":
-          from_user = "(machine)"
-     else:
-          # Get the username.
-          from_user = filter(str.isalnum, out_item[9].split('@')[0])
-
-     print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
-     
-     # Remove the fax.
-     c.hideFax(int(out_item[1]))
-     time.sleep(1)
+          # Remove the fax.
+          c.hideFax(int(out_item[1]))
 
 out_log.close()
+
+# Save the full cache now
+pickle.dump((inbound_cache, outbound_cache), open('.pickle-cache', 'w'))
