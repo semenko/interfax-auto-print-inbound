@@ -16,6 +16,7 @@ import subprocess
 import time
 from os import mkdir
 from interfax import client
+from socket import gaierror
 from sys import stderr
 
 print("Getting credentials.")
@@ -46,7 +47,13 @@ c = client.InterFaxClient(username, password)
 ##########
 
 print("Getting 20 most recent inbound faxes...")
-in_result = c.getList('AllMessages', 20)
+
+try:
+     in_result = c.getList('AllMessages', 20)
+except gaierror:
+     print("Endpoint error, let's try later.")
+     exit()
+
 if in_result[0] != 0:
      print >> stderr, "ERROR: Inbound return code %d" % in_result[0]
      exit()
@@ -82,7 +89,7 @@ for in_item in reversed(in_result[1]):
      # Write the log of inbound faxes.
      t = in_item[7]
      rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4])  # Meh, strftime lazy. 
-     print >> in_log , "%s> From: %s (%s), Pages: %d, Message ID: %d" % (rcv_time, filter(str.isalnum, in_item[8]), filter(str.isalnum, in_item[2]), in_item[4], in_item[0])
+     print >> in_log , "%s> From: %s (%s), Pages: %d, Message ID: %d\r" % (rcv_time, filter(str.isalnum, in_item[8]), filter(str.isalnum, in_item[2]), in_item[4], in_item[0])
 
 in_log.close()
 
@@ -103,7 +110,7 @@ print('\tFaxQuery returned with %d items' % (len(out_result[1])))
 
 # Save those to our log
 out_log = open('outbound_fax_log.txt', 'a')
-for out_item in out_result[1]:
+for out_item in reversed(out_result[1]):
      if out_item[0] not in outbound_cache:
           outbound_cache.insert(0, out_item[0])
 
@@ -126,7 +133,7 @@ for out_item in out_result[1]:
                # Get the username.
                from_user = filter(str.isalnum, out_item[9].split('@')[0])
 
-          print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
+          print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d\r" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
      
           # Remove the fax.
           c.hideFax(int(out_item[1]))
