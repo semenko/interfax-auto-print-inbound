@@ -144,24 +144,25 @@ error_code_map = {
 out_log = open('outbound_fax_log.txt', 'a')
 for out_item in reversed(out_result[1]):
      if out_item[0] not in outbound_cache:
-          outbound_cache.insert(0, out_item[0])
-
           # "\nparentTxId: %d\ntxId: %d\nsubmitTime: %s\npostponeTime: %s\ncompletionTime: %s\nuserId: %s\ncontact: %s\njobId: %s\ndestinationFax: %s\nreplyEmail: %s\nremoteCSID: %s\npagesSent: %s\nstatus: %d\nduration: %d\nsubject: %s\npagesSubmitted: %d\nsenderCSID: %s\npriority: %d\nunits: %d\ncostPerUnit: %d\npageSize: %s\npageOrientation: %s\npageResolution: %s\nrenderingQuality: %s\npageHeader: %s\nretriesToPerform: %d\ntrialsPerformed: %d" % currItem
 
-          t = out_item[2]  # Submitted time.
-          rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
-
           status_code = int(out_item[12])
-          if status_code == 0:
+          if status_code < 0:
+               # We're still sending this fax. Let's skip this loop iteration.
+               continue
+          elif status_code == 0:
                status = "Ok"
-          elif status_code < 0:
-               status = "Sending"
           else:
                try:
                     status = "ERROR! %d - %s" % (status_code, error_code_map[status_code])
                except KeyError:
                     status = "ERROR! Code: %d" % (status_code)
           
+          outbound_cache.insert(0, out_item[0])
+
+          t = out_item[2]  # Submitted time.
+          rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
+
           if out_item[9] == "secure-fax@aldinetravel.com" or out_item[9] == "info@aldinetravel.com":
                from_user = "(machine)"
           else:
