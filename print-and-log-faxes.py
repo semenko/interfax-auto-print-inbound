@@ -60,7 +60,7 @@ except TypeError:
      print("Endpoint error, returning HTML.")
      exit()
 
-if in_result[0] == "-150":
+if in_result[0] == -150:
      print("Inbound internal error. Trying back later.")
      exit()
 elif in_result[0] != 0:
@@ -128,6 +128,18 @@ if out_result[0] != 0:
      exit()
 print('\tFaxQuery returned with %d items' % (len(out_result[1])))
 
+# Via: http://www.interfax.net/en/help/error_codes
+error_code_map = {
+     3220: 'Fax machine incompatibility. Please try again.',
+     3224: 'The remote fax machine failed to respond.',
+     6001: 'Phone number not operational. Wrong number?',
+     6002: 'No route available. Wrong number?',
+     6017: 'Busy signal from receiving fax.',
+     6028: 'Phone number not operational. Wrong number?',
+     8010: 'The remote fax machine hung up before receiving fax',
+     8021: 'No answer from receiving fax.'
+}
+
 # Save those to our log
 out_log = open('outbound_fax_log.txt', 'a')
 for out_item in reversed(out_result[1]):
@@ -145,7 +157,10 @@ for out_item in reversed(out_result[1]):
           elif status_code < 0:
                status = "Sending"
           else:
-               status = "ERROR! Code: %d" % (status_code)
+               try:
+                    status = "ERROR! %d - %s" % (status_code, error_code_map[status_code])
+               except KeyError:
+                    status = "ERROR! Code: %d" % (status_code)
           
           if out_item[9] == "secure-fax@aldinetravel.com" or out_item[9] == "info@aldinetravel.com":
                from_user = "(machine)"
