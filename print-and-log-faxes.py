@@ -14,9 +14,9 @@ import ConfigParser
 import pickle
 import subprocess
 import time
+import socket
 from os import mkdir
 from interfax import client
-from socket import gaierror
 from sys import stderr
 
 print("Getting credentials.")
@@ -50,8 +50,14 @@ print("Getting 20 most recent inbound faxes...")
 
 try:
      in_result = c.getList('AllMessages', 20)
-except gaierror:
+except socket.gaierror:
      print("Endpoint error, let's try later.")
+     exit()
+except socket.error:
+     print("Other generic socket error. We'll try back later.")
+     exit()
+except TypeError:
+     print("Endpoint error, returning HTML.")
      exit()
 
 if in_result[0] != 0:
@@ -102,7 +108,18 @@ pickle.dump((inbound_cache, outbound_cache), open('.pickle-cache', 'w'))
 #############
 
 print("Getting 50 most recent outbound faxes...")
-out_result = c.faxQuery( 'LT', 999999999, 50)
+try:
+     out_result = c.faxQuery( 'LT', 999999999, 50)
+except socket.gaierror:
+     print("Endpoint error, let's try later.")
+     exit()
+except socket.error:
+     print("Other generic socket error. We'll try back later.")
+     exit()
+except TypeError:
+     print("Endpoint error, returning HTML.")
+     exit()
+
 if out_result[0] != 0:
      print >> stderr, "ERROR: OUTbound return code %d" % in_result[0]
      exit()
@@ -127,7 +144,7 @@ for out_item in reversed(out_result[1]):
           else:
                status = "ERROR! Code: %d" % (status_code)
           
-          if out_item[9] == "info@aldinetravel.com":
+          if out_item[9] == "secure-fax@aldinetravel.com" or out_item[9] == "info@aldinetravel.com":
                from_user = "(machine)"
           else:
                # Get the username.
@@ -136,7 +153,10 @@ for out_item in reversed(out_result[1]):
           print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d\r" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
      
           # Remove the fax.
-          c.hideFax(int(out_item[1]))
+          try:
+               c.hideFax(int(out_item[1]))
+          except socket.error:
+               pass
 
 out_log.close()
 
