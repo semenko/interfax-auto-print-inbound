@@ -91,7 +91,7 @@ for in_item in reversed(in_result[1]):
                ### Call lpr and print
                retcode = subprocess.call(['lpr', '-P', 'Brother_MFC-8910DW', 'inbound/%d.pdf' % in_item[0]])
                if retcode < 0:
-                    print >>sys.stderr, "Printing error, child was terminated by signal", -retcode
+                    print >>stderr, "Printing error, child was terminated by signal", -retcode
           else:
                print("Error downloading message %d, code: %d" % (in_item[0], dl_return_code))
 
