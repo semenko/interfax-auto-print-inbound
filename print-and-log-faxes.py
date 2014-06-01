@@ -60,7 +60,10 @@ except TypeError:
      print("Endpoint error, returning HTML.")
      exit()
 
-if in_result[0] != 0:
+if in_result[0] == "-150":
+     print("Inbound internal error. Trying back later.")
+     exit()
+elif in_result[0] != 0:
      print >> stderr, "ERROR: Inbound return code %d" % in_result[0]
      exit()
 print('\tGetList returned with %d items' % (len(in_result[1])))
