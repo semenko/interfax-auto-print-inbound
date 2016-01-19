@@ -23,6 +23,6 @@ This is provided with no warranty or security guarantee (see `LICENSE`). This ma
 + https://nick.semenkovich.com/
 
 ## License
-Copyright 2015-2016, Nick Semenkovich <semenko@alum.mit.edu>
+Copyright 2014-2016, Nick Semenkovich <semenko@alum.mit.edu>
 
 Released under the MIT License. See LICENSE for details.
