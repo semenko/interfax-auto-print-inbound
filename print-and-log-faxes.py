@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 """
-Get inbound faxes, print them, log them.
-
-Get outbound faxes, log them.
+Download inbound faxes, print them, log them.
 
 Author: Nick Semenkovich <semenko@alum.mit.edu>
 License: MIT
 
-This is a hackjob and could be trivially optimized (and hasn't been tested). You've been warned.
+This is a hackjob and could be trivially optimized and is barely tested. You've been warned.
 """
 
 import ConfigParser
@@ -26,20 +24,17 @@ config.read('.auth')
 username = config.get('interfax', 'username', 0)
 password = config.get('interfax', 'password', 0)
 
-print("Getting inbound/outbound cache...")
+print("Getting inbound cache...")
 try:
      pkl_file = open('.pickle-cache', 'rb')
-     inbound_cache, outbound_cache = pickle.load(pkl_file)
+     inbound_cache = pickle.load(pkl_file)
      while len(inbound_cache) > 20:
           inbound_cache.pop()
-     while len(outbound_cache) > 50:
-          outbound_cache.pop()
 except IOError:
      print("\tNo cache found, creating new one.")
      inbound_cache = []
-     outbound_cache = []
 
-print("Connecting to interfax.")
+print("Connecting to Interfax.")
 c = client.InterFaxClient(username, password)
 
 ##########
@@ -102,82 +97,5 @@ for in_item in reversed(in_result[1]):
 
 in_log.close()
 
-# Save the printed cache, only partially updated (outbound coming next!)
-pickle.dump((inbound_cache, outbound_cache), open('.pickle-cache', 'w'))
-
-
-#############
-# Outbound faxes
-#############
-
-print("Getting 50 most recent outbound faxes...")
-try:
-     out_result = c.faxQuery( 'LT', 999999999, 50)
-except socket.gaierror:
-     print("Endpoint error, let's try later.")
-     exit()
-except socket.error:
-     print("Other generic socket error. We'll try back later.")
-     exit()
-except TypeError:
-     print("Endpoint error, returning HTML.")
-     exit()
-
-if out_result[0] != 0:
-     print >> stderr, "ERROR: OUTbound return code %d" % in_result[0]
-     exit()
-print('\tFaxQuery returned with %d items' % (len(out_result[1])))
-
-# Via: http://www.interfax.net/en/help/error_codes
-error_code_map = {
-     3220: 'Fax machine incompatibility. Please try again.',
-     3224: 'The remote fax machine failed to respond.',
-     6001: 'Phone number not operational. Wrong number?',
-     6002: 'No route available. Wrong number?',
-     6017: 'Busy signal from receiving fax.',
-     6028: 'Phone number not operational. Wrong number?',
-     8010: 'The remote fax machine hung up before receiving fax',
-     8021: 'No answer from receiving fax.'
-}
-
-# Save those to our log
-out_log = open('outbound_fax_log.txt', 'a')
-for out_item in reversed(out_result[1]):
-     if out_item[0] not in outbound_cache:
-          # "\nparentTxId: %d\ntxId: %d\nsubmitTime: %s\npostponeTime: %s\ncompletionTime: %s\nuserId: %s\ncontact: %s\njobId: %s\ndestinationFax: %s\nreplyEmail: %s\nremoteCSID: %s\npagesSent: %s\nstatus: %d\nduration: %d\nsubject: %s\npagesSubmitted: %d\nsenderCSID: %s\npriority: %d\nunits: %d\ncostPerUnit: %d\npageSize: %s\npageOrientation: %s\npageResolution: %s\nrenderingQuality: %s\npageHeader: %s\nretriesToPerform: %d\ntrialsPerformed: %d" % currItem
-
-          status_code = int(out_item[12])
-          if status_code < 0:
-               # We're still sending this fax. Let's skip this loop iteration.
-               continue
-          elif status_code == 0:
-               status = "Ok"
-          else:
-               try:
-                    status = "ERROR! %d - %s" % (status_code, error_code_map[status_code])
-               except KeyError:
-                    status = "ERROR! Code: %d" % (status_code)
-          
-          outbound_cache.insert(0, out_item[0])
-
-          t = out_item[2]  # Submitted time.
-          rcv_time = "%d/%d/%d %02d:%02d" % (t[1], t[2], t[0], t[3], t[4]) # Really, strftime could go here...
-
-          if out_item[9] == "secure-fax@aldinetravel.com" or out_item[9] == "info@aldinetravel.com":
-               from_user = "(machine)"
-          else:
-               # Get the username.
-               from_user = filter(str.isalnum, out_item[9].split('@')[0])
-
-          print >> out_log, "%s> (%s) From: %s, To: %s, Pages: %d, Transaction: %d\r" % (rcv_time, status, from_user, filter(str.isalnum, out_item[8]), out_item[11], out_item[1])
-     
-          # Remove the fax.
-          try:
-               c.hideFax(int(out_item[1]))
-          except socket.error:
-               pass
-
-out_log.close()
-
-# Save the full cache now
-pickle.dump((inbound_cache, outbound_cache), open('.pickle-cache', 'w'))
+# Save the printed cache
+pickle.dump((inbound_cache), open('.pickle-cache', 'w'))
