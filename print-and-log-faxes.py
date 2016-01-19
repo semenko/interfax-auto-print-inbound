@@ -1,23 +1,30 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Download inbound faxes, print them, log them.
+List, download, and automatically print inbound faxes from Interfax.
+
+This script is poorly tested and provided with *no warranty*.
 
 Author: Nick Semenkovich <semenko@alum.mit.edu>
 License: MIT
-
-This is a hackjob and could be trivially optimized and is barely tested. You've been warned.
 """
 
 import ConfigParser
 import pickle
 import subprocess
-import time
 import socket
-from os import mkdir
+import os
 from interfax import client
 from sys import stderr
 
-print("Getting credentials.")
+# Inbound storage
+try:
+     # This is all on a ram drive for security.
+     os.mkdir("inbound")
+except OSError:
+     pass
+
+print("Loading Getting credentials.")
 config = ConfigParser.ConfigParser()
 config.read('.auth')
 
@@ -34,7 +41,8 @@ except IOError:
      print("\tNo cache found, creating new one.")
      inbound_cache = []
 
-print("Connecting to Interfax.")
+
+print("Connecting to Interfax")
 c = client.InterFaxClient(username, password)
 
 ##########
@@ -63,11 +71,7 @@ elif in_result[0] != 0:
      exit()
 print('\tGetList returned with %d items' % (len(in_result[1])))
 
-try:
-     # This is all on a ram drive for security.
-     mkdir("inbound")
-except OSError:
-     pass
+
 
 # Loop over inbound faxes
 in_log = open('inbound_fax_log.txt', 'a')

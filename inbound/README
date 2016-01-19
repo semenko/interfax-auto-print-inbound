@@ -1,0 +1,3 @@
+Inbound faxes will appear here.
+
+For security, you may wish to move this directory (e.g. to a tmpfs/ramdrive).
