@@ -14,21 +14,27 @@ import pickle
 import subprocess
 import socket
 import os
-from interfax import client
 from sys import stderr
 
 
-# Load settings
+#### Load settings
+print("Parsing configuration")
 config = ConfigParser.ConfigParser()
 config.read('interfax.yaml')
 
-username = config.get('interfax', 'username', 0)
-password = config.get('interfax', 'password', 0)
-inbound_directory = config.get('interfax', 'inbound')
+username = config.get('interfax', 'username')
+password = config.get('interfax', 'password')
+inbound_directory = config.get('interfax', 'inbound_directory')
 
+# Sanity checks
 assert(os.access(inbound_directory, os.W_OK))
+assert(len(username) > 3)
+assert(len(password) > 3)
+##
 
-print("Getting inbound cache...")
+
+#### Load a record of previous inbound faxes.
+print("Getting inbound cache")
 try:
     pkl_file = open('.pickle-cache', 'rb')
     inbound_cache = pickle.load(pkl_file)
@@ -39,12 +45,9 @@ except IOError:
     inbound_cache = []
 
 
+#### Connect to Interfax APIs
 print("Connecting to Interfax")
 c = client.InterFaxClient(username, password)
-
-##########
-# Inbound faxes
-##########
 
 print("Getting 20 most recent inbound faxes...")
 

@@ -1,0 +1,4 @@
+[interfax]
+username = myusername
+password = mypass
+inbound_directory = inbound/
